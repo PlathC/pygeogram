@@ -33,13 +33,13 @@ nanobind_add_module(grampy_ext
         grampy.cpp)
 
 get_cxx_flags(GRP_COMPILATION_FLAGS GRP_COMPILE_DEFINITIONS)
-target_compile_options(grampy PRIVATE ${GRP_COMPILATION_FLAGS})
-target_compile_definitions(grampy PRIVATE ${GRP_COMPILE_DEFINITIONS})
-target_include_directories(grampy SYSTEM PRIVATE ${GRP_EXTERN_INCLUDES})
-target_include_directories(grampy PRIVATE include/)
-target_include_directories(grampy SYSTEM INTERFACE include/)
-target_link_libraries(grampy PRIVATE ${GRP_LINK_LIBRARIES})
-target_compile_features(grampy PRIVATE cxx_std_20)
+target_compile_options(grampy_ext PRIVATE ${GRP_COMPILATION_FLAGS})
+target_compile_definitions(grampy_ext PRIVATE ${GRP_COMPILE_DEFINITIONS})
+target_include_directories(grampy_ext SYSTEM PRIVATE ${GRP_EXTERN_INCLUDES})
+target_include_directories(grampy_ext PRIVATE include/)
+target_include_directories(grampy_ext SYSTEM INTERFACE include/)
+target_link_libraries(grampy_ext PRIVATE ${GRP_LINK_LIBRARIES})
+target_compile_features(grampy_ext PRIVATE cxx_std_20)
 
 # Install directive for scikit-build-core
 install(TARGETS grampy_ext LIBRARY DESTINATION grampy)
