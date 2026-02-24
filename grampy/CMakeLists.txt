@@ -3,9 +3,9 @@ add_subdirectory(extern)
 # nanobind setup
 if (CMAKE_VERSION VERSION_LESS 3.18)
     set(DEV_MODULE Development)
-else()
+else ()
     set(DEV_MODULE Development.Module)
-endif()
+endif ()
 
 find_package(Python 3.13 COMPONENTS Interpreter ${DEV_MODULE} REQUIRED)
 
@@ -15,7 +15,22 @@ execute_process(
         OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
 find_package(nanobind CONFIG REQUIRED)
 
-nanobind_add_module(grampy grampy.cpp)
+nanobind_add_module(grampy
+
+        # Target the stable ABI for Python 3.12+, which reduces
+        # the number of binary wheels that must be built. This
+        # does nothing on older Python versions
+        STABLE_ABI
+
+        # Build libnanobind statically and merge it into the
+        # extension (which itself remains a shared library)
+        #
+        # If your project builds multiple extensions, you can
+        # replace this flag by NB_SHARED to conserve space by
+        # reusing a shared libnanobind across libraries
+        NB_STATIC
+
+        grampy.cpp)
 
 get_cxx_flags(GRP_COMPILATION_FLAGS GRP_COMPILE_DEFINITIONS)
 target_compile_options(grampy PRIVATE ${GRP_COMPILATION_FLAGS})
@@ -26,3 +41,5 @@ target_include_directories(grampy SYSTEM INTERFACE include/)
 target_link_libraries(grampy PRIVATE ${GRP_LINK_LIBRARIES})
 target_compile_features(grampy PRIVATE cxx_std_20)
 
+# Install directive for scikit-build-core
+install(TARGETS grampy_ext LIBRARY DESTINATION grampy)
