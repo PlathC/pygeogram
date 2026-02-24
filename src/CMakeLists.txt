@@ -41,5 +41,11 @@ target_include_directories(grampy_ext SYSTEM INTERFACE include/)
 target_link_libraries(grampy_ext PRIVATE ${GRP_LINK_LIBRARIES})
 target_compile_features(grampy_ext PRIVATE cxx_std_20)
 
+find_package(OpenMP)
+if (OpenMP_CXX_FOUND)
+    target_link_libraries(grampy_ext PUBLIC OpenMP::OpenMP_CXX)
+endif ()
+
+
 # Install directive for scikit-build-core
 install(TARGETS grampy_ext LIBRARY DESTINATION grampy)
