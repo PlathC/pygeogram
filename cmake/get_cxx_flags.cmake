@@ -49,6 +49,13 @@ function(get_cxx_flags compile_flag_var compile_definitions_var)
         )
     endif ()
 
+    if (CMAKE_SYSTEM_NAME MATCHES Linux)
+        set(${compile_flag_var}
+                ${${compile_flag_var}}
+                -fopenmp
+        )
+    endif ()
+
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
         set(${compile_flag_var}
                 ${${compile_flag_var}}
