@@ -30,7 +30,7 @@ nanobind_add_module(grampy_ext
         # reusing a shared libnanobind across libraries
         NB_STATIC
 
-        grampy.cpp)
+        grampy_ext.cpp)
 
 get_cxx_flags(GRP_COMPILATION_FLAGS GRP_COMPILE_DEFINITIONS)
 target_compile_options(grampy_ext PRIVATE ${GRP_COMPILATION_FLAGS})
