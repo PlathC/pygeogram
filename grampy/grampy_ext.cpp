@@ -66,7 +66,7 @@ struct PowerDiagram3d
     bool                  hasEmptyCells = false;
 };
 
-NB_MODULE(grampy, m)
+NB_MODULE(grampy_ext, m)
 {
     nb::class_<PowerDiagram3d>(m, "PowerDiagram3d")
         .def(nb::init<const WeightedSite3dList&, bool>(), "sites"_a, "abord_if_empty"_a = false)
