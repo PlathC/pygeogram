@@ -26,4 +26,4 @@ endif ()
 
 include(cmake/get_cxx_flags.cmake)
 
-add_subdirectory(grampy)
+add_subdirectory(src)
