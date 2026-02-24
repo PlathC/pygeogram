@@ -1,0 +1,3 @@
+[submodule "grampy/extern/geogram"]
+	path = grampy/extern/geogram
+	url = https://github.com/BrunoLevy/geogram.git
