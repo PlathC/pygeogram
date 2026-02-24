@@ -15,7 +15,7 @@ execute_process(
         OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
 find_package(nanobind CONFIG REQUIRED)
 
-nanobind_add_module(grampy
+nanobind_add_module(grampy_ext
 
         # Target the stable ABI for Python 3.12+, which reduces
         # the number of binary wheels that must be built. This
