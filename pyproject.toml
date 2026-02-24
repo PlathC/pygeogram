@@ -40,6 +40,7 @@ wheel.py-api = "cp313"
 build-verbosity = 1
 
 # Run pytest to ensure that the package was correctly built
+before-test = "pip install .[test]"
 test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
