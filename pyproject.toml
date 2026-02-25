@@ -4,7 +4,7 @@ requires = ["scikit-build-core >=0.10", "nanobind >=1.3.2"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "grampy"
+name = "geogram"
 version = "0.0.1"
 description = "python geogram binding"
 readme = "README.md"
