@@ -15,7 +15,7 @@ execute_process(
         OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
 find_package(nanobind CONFIG REQUIRED)
 
-nanobind_add_module(grampy_ext
+nanobind_add_module(geogram_ext
 
         # Target the stable ABI for Python 3.12+, which reduces
         # the number of binary wheels that must be built. This
@@ -30,22 +30,22 @@ nanobind_add_module(grampy_ext
         # reusing a shared libnanobind across libraries
         NB_STATIC
 
-        grampy_ext.cpp)
+        geogram_ext.cpp)
 
 get_cxx_flags(GRP_COMPILATION_FLAGS GRP_COMPILE_DEFINITIONS)
-target_compile_options(grampy_ext PRIVATE ${GRP_COMPILATION_FLAGS})
-target_compile_definitions(grampy_ext PRIVATE ${GRP_COMPILE_DEFINITIONS})
-target_include_directories(grampy_ext SYSTEM PRIVATE ${GRP_EXTERN_INCLUDES})
-target_include_directories(grampy_ext PRIVATE include/)
-target_include_directories(grampy_ext SYSTEM INTERFACE include/)
-target_link_libraries(grampy_ext PRIVATE ${GRP_LINK_LIBRARIES})
-target_compile_features(grampy_ext PRIVATE cxx_std_20)
+target_compile_options(geogram_ext PRIVATE ${GRP_COMPILATION_FLAGS})
+target_compile_definitions(geogram_ext PRIVATE ${GRP_COMPILE_DEFINITIONS})
+target_include_directories(geogram_ext SYSTEM PRIVATE ${GRP_EXTERN_INCLUDES})
+target_include_directories(geogram_ext PRIVATE include/)
+target_include_directories(geogram_ext SYSTEM INTERFACE include/)
+target_link_libraries(geogram_ext PRIVATE ${GRP_LINK_LIBRARIES})
+target_compile_features(geogram_ext PRIVATE cxx_std_20)
 
 find_package(OpenMP)
 if (OpenMP_CXX_FOUND)
-    target_link_libraries(grampy_ext PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(geogram_ext PUBLIC OpenMP::OpenMP_CXX)
 endif ()
 
 
 # Install directive for scikit-build-core
-install(TARGETS grampy_ext LIBRARY DESTINATION grampy)
+install(TARGETS geogram_ext LIBRARY DESTINATION geogram)
