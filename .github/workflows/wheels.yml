@@ -1,6 +1,4 @@
 name: Wheels
-permissions:
-  id-token: write
 
 on:
   workflow_dispatch:
@@ -63,6 +61,9 @@ jobs:
     needs: [ build_wheels, build_sdist ]
     runs-on: ubuntu-latest
     # if: github.event_name == 'release' && github.event.action == 'published'
+    environment: pypi
+    permissions:
+      id-token: write
 
     steps:
       - uses: actions/setup-python@v6
