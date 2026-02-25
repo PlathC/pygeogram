@@ -1,5 +1,6 @@
 [build-system]
-requires = ["scikit-build-core >=0.10", "nanobind >=1.3.2"]
+# https://github.com/scikit-build/scikit-build-core/issues/1234
+requires = ["scikit-build-core >=0.11.6", "nanobind >=1.3.2"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -46,7 +47,3 @@ test-requires = "pytest"
 # Needed for full C++17 support
 [tool.cibuildwheel.macos.environment]
 MACOSX_DEPLOYMENT_TARGET = "10.15"
-
-# https://github.com/scikit-build/scikit-build-core/issues/1234
-[tool.uv.extra-build-dependencies]
-h3 = ["scikit-build-core==0.11.6"]
