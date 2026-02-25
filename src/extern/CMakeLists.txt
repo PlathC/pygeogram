@@ -31,6 +31,8 @@ if (NOT TARGET geogram)
         set(VORPALINE_PLATFORM "Android-aarch64-gcc")
     endif ()
 
+    message("[geogram] Use VORPALINE_PLATFORM -> ${VORPALINE_PLATFORM}")
+
     add_subdirectory(geogram)
     get_target_property(target_type geogram TYPE)
 
