@@ -1,6 +1,6 @@
 [build-system]
 # https://github.com/scikit-build/scikit-build-core/issues/1234
-requires = ["scikit-build-core >=0.11.6", "nanobind >=1.3.2"]
+requires = ["scikit-build-core", "nanobind >=1.3.2"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -38,6 +38,8 @@ wheel.py-api = "cp313"
 [tool.cibuildwheel]
 # Necessary to see build output from the actual compilation
 build-verbosity = 1
+build = ["cp39-*", "cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
+archs = ["auto64"]
 
 # Run pytest to ensure that the package was correctly built
 before-test = "pip install .[test]"
@@ -47,3 +49,4 @@ test-requires = "pytest"
 # Needed for full C++17 support
 [tool.cibuildwheel.macos.environment]
 MACOSX_DEPLOYMENT_TARGET = "10.15"
+
