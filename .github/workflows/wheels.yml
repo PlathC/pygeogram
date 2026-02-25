@@ -1,6 +1,6 @@
 name: Wheels
 permissions:
-  contents: read
+  id-token: write
 
 on:
   workflow_dispatch:
@@ -75,5 +75,3 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          user: __token__
-          password: ${{ secrets.pypi_password }}
