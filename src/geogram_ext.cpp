@@ -4,10 +4,11 @@
 #include "disable_warnings.hpp"
 //
 #include <geogram/basic/command_line.h>
+#include <geogram/basic/command_line_args.h>
 #include <geogram/delaunay/delaunay_2d.h>
 #include <geogram/delaunay/periodic_delaunay_3d.h>
 #include <geogram/mesh/mesh_io.h>
-
+#include <geogram/voronoi/RVD.h>
 //
 #include "enable_warnings.hpp"
 //
@@ -18,204 +19,246 @@
 #include <nanobind/stl/bind_vector.h>
 #include <nanobind/stl/vector.h>
 
-#include "geogram/voronoi/RVD.h"
-
 namespace nb = nanobind;
 using namespace nb::literals;
-using Points2d = nb::ndarray<double, nb::numpy, nb::shape<-1, 2>, nb::device::cpu, nb::c_contig>;
-using Points3d = nb::ndarray<double, nb::numpy, nb::shape<-1, 3>, nb::device::cpu, nb::c_contig>;
-using Weights  = nb::ndarray<double, nb::numpy, nb::shape<-1>, nb::device::cpu, nb::c_contig>;
 
-struct PowerDiagram2d
+using DoubleArray  = nb::ndarray<double, nb::numpy, nb::shape<-1>, nb::device::cpu, nb::c_contig>;
+using VectorArray  = nb::ndarray<double, nb::numpy, nb::shape<-1, -1>, nb::device::cpu, nb::c_contig>;
+using SimplexArray = nb::ndarray<GEO::index_t, nb::numpy, nb::shape<-1, -1>, nb::device::cpu, nb::c_contig>;
+
+struct Voronoi
 {
-    PowerDiagram2d(const Points2d& centers, const Weights& wweights)
+    Voronoi(const VectorArray& iSeeds, const DoubleArray& iWeights, const VectorArray& domainVertices,
+            const SimplexArray& domainSimplices)
+        : dimension(static_cast<uint32_t>(iSeeds.shape(1))), //
+          seedNb(static_cast<uint32_t>(iSeeds.shape(0))),    //
+          isWeighted(iWeights.is_valid())                    //
     {
         GEO::initialize(GEO::GEOGRAM_INSTALL_ALL);
-        GEO::CmdLine::set_arg("dbg:delaunay", false);
-        GEO::CmdLine::set_arg("dbg:delaunay_verbose", false);
+        GEO::CmdLine::set_arg("dbg:delaunay", true);
+        GEO::CmdLine::set_arg("dbg:delaunay_verbose", true);
         GEO::CmdLine::set_arg("dbg:delaunay_benchmark", false);
 
-        assert(centers.shape(0) == weights.shape(0));
-        const std::size_t siteNb = centers.shape(0);
+        GEO::CmdLine::import_arg_group("standard");
+        GEO::CmdLine::import_arg_group("algo");
 
-        impl = GEO::Delaunay::create(GEO::coord_index_t(3), "BPOW2d");
-        impl->set_keeps_infinite(true);
-        impl->set_stores_cicl(true);
+        geo_assert(iSeeds.shape(1) == 2 || iSeeds.shape(1) == 3);
+        geo_assert(iSeeds.shape(0) > 0);
+        geo_assert(!isWeighted || iSeeds.shape(0) == iWeights.shape(0));
+        geo_assert(domainVertices.shape(1) == dimension);
+        geo_assert(domainSimplices.shape(1) == dimension + 1);
 
-        double maxWeight = -std::numeric_limits<double>::max();
-        for (uint32_t i = 0; i < siteNb; ++i)
-            maxWeight = std::max(maxWeight, wweights(i));
+        // Copy buffers
+        seeds.resize(seedNb * dimension);
+        std::memcpy(seeds.data(), iSeeds.data(), seedNb * dimension * sizeof(double));
 
-        points.resize(siteNb * 2);
-        weights.resize(siteNb);
-
-        std::vector<double> pointsAndWeights = std::vector(3 * siteNb, 0.);
-        for (uint32_t i = 0; i < siteNb; ++i)
+        printf("is weighted -> %d\n", isWeighted);
+        if (isWeighted)
         {
-            pointsAndWeights[3 * i + 0] = centers(i, 0);
-            pointsAndWeights[3 * i + 1] = centers(i, 1);
-            pointsAndWeights[3 * i + 2] = std::sqrt(maxWeight - wweights(i));
-
-            points[2 * i + 0] = centers(i, 0);
-            points[2 * i + 1] = centers(i, 1);
-            weights[i]        = wweights(i);
+            weights.resize(seedNb);
+            std::memcpy(weights.data(), iWeights.data(), seedNb * sizeof(double));
         }
 
-        impl->set_vertices(GEO::index_t(siteNb), pointsAndWeights.data());
+        // Compute triangulation
+        std::string name = "default";
+        if (dimension == 2)
+            name = isWeighted ? "BPOW2d" : "BDEL2d";
+        else if (dimension == 3)
+            name = isWeighted ? "BPOW" : "PDEL";
 
-        const uint32_t tetNb = impl->nb_cells();
-        triangles.resize(tetNb * 3);
-
-        for (GEO::index_t t = 0; t < tetNb; ++t)
+        GEO::Delaunay_var impl  = GEO::Delaunay::create(GEO::coord_index_t(dimension + (isWeighted ? 1 : 0)), name);
+        auto              input = std::vector((dimension + (isWeighted ? 1 : 0)) * seedNb, 0.);
+        if (isWeighted)
         {
-            triangles[t * 3 + 0] = GEO::index_t(impl->cell_vertex(t, 0));
-            triangles[t * 3 + 1] = GEO::index_t(impl->cell_vertex(t, 1));
-            triangles[t * 3 + 2] = GEO::index_t(impl->cell_vertex(t, 2));
+            double maxWeight = -std::numeric_limits<double>::max();
+            for (uint32_t i = 0; i < seedNb; ++i)
+                maxWeight = std::max(maxWeight, weights[i]);
+
+            const uint32_t stride = dimension + 1;
+            for (uint32_t i = 0; i < seedNb; ++i)
+            {
+                for (uint32_t d = 0; d < dimension; ++d)
+                    input[stride * i + d] = seeds[stride * i + d];
+
+                input[stride * i + dimension] = std::sqrt(maxWeight - weights[i]);
+            }
         }
+        else
+        {
+            std::memcpy(input.data(), seeds.data(), seedNb * dimension * sizeof(double));
+            for (uint32_t i = 0; i < seedNb; ++i)
+            {
+                for (uint32_t d = 0; d < dimension; ++d)
+                    printf("%.6f, ", input[i * dimension + d]);
+
+                printf("\n");
+            }
+        }
+
+        GEO::Mesh      domain;
+        const uint32_t domainVertexNb  = static_cast<GEO::index_t>(domainVertices.shape(0) / dimension);
+        const uint32_t domainSimplexNb = static_cast<uint32_t>(domainSimplices.shape(0));
+
+        GEO::vector<GEO::index_t> domainSimplicesCopy = GEO::vector<GEO::index_t>(domainSimplexNb * dimension);
+        for (uint32_t i = 0; i < domainSimplexNb; i++)
+        {
+            for (uint32_t d = 0; d < dimension; ++d)
+                domainSimplicesCopy[i * dimension + d] = domainSimplices(i, d);
+        }
+
+        GEO::vector<double> domainVerticesCopy(domainVertexNb * dimension);
+        for (uint32_t v = 0; v < domainVertexNb; ++v)
+        {
+            for (uint32_t d = 0; d < dimension; ++d)
+                domainVerticesCopy[v * dimension + d] = domainVertices(v, d);
+        }
+
+        if (impl->dimension() == 3)
+            domain.cells.assign_tet_mesh(dimension, domainVerticesCopy, domainSimplicesCopy, true);
+        else if (impl->dimension() == 2)
+            domain.facets.assign_triangle_mesh(dimension, domainVerticesCopy, domainSimplicesCopy, true);
+        else
+            geo_assert_not_reached;
+
+        // Compute voronoi diagram
+        GEO::RestrictedVoronoiDiagram_var RVD = GEO::RestrictedVoronoiDiagram::create(impl, &domain);
+        RVD->set_volumetric(true);
+
+        GEO::Mesh resultMesh;
+        impl->set_vertices(GEO::index_t(seedNb), input.data());
+        RVD->compute_RVD(resultMesh);
+
+        // Output voronoi diagram
+        printf("impl->dimension() -> %d\n", impl->dimension());
+        printf("impl->nb_cells() -> %d\n", impl->nb_cells());
+        printf("Found %d vertices of dimension %d\n", resultMesh.vertices.nb(), resultMesh.vertices.dimension());
+
+        vertices.resize(resultMesh.vertices.nb() * dimension);
+        for (uint32_t v = 0; v < resultMesh.vertices.nb(); v++)
+        {
+            for (uint32_t d = 0; d < dimension; ++d)
+                vertices[v * dimension + d] = resultMesh.vertices.point_ptr(v)[d];
+        }
+
+        // One or the other of the following structure should be kept depending on the dimension
+        triangle_vertices.resize(resultMesh.facets.nb() * 3);
+        std::memcpy(triangle_vertices.data(), resultMesh.facet_corners.vertex_index_ptr(0),
+                    sizeof(GEO::index_t) * triangle_vertices.size());
+
+        // adjacency seems to be only available for triangles
+        triangle_adjacency.resize(resultMesh.facets.nb() * 3);
+        std::memcpy(triangle_adjacency.data(), resultMesh.facet_corners.adjacent_facet_ptr(0),
+                    sizeof(GEO::index_t) * triangle_adjacency.size());
+
+        // GEO::Attribute<GEO::index_t> facet_region_attr(resultMesh.facets.attributes(), "region");
+        // for (GEO::index_t f = 0; f < resultMesh.facets.nb(); ++f)
+        //     triangle_regions[f] = facet_region_attr[f];
+
+        // - tetrahedra
+        tet_vertices.resize(resultMesh.cells.nb() * 4);
+        std::memcpy(tet_vertices.data(), resultMesh.cell_corners.vertex_index_ptr(0),
+                    sizeof(GEO::index_t) * tet_vertices.size());
+
+        // GEO::Attribute<GEO::index_t> cell_region_attr(resultMesh.cells.attributes(), "region");
+        // for (GEO::index_t c = 0; c < resultMesh.cells.nb(); ++c)
+        //     tet_regions[c] = cell_region_attr[c];
     }
 
-    std::array<double, 3> bisector(uint32_t i, uint32_t j)
-    {
-        const GEO::vec2 pi = GEO::vec2(&points[i * 3]);
-        const GEO::vec2 pj = GEO::vec2(&points[j * 3]);
+    // Settings
+    uint32_t dimension;
+    uint32_t seedNb;
+    bool     isWeighted;
 
-        const double wij = -.5 * (dot(pj, pj) - dot(pi, pi) - weights[j] + weights[i]);
-        return {pj.x - pi.x, pj.y - pi.y, wij};
-    }
-
-    std::array<double, 2> vertex(uint32_t v)
-    {
-        const uint32_t i = triangles[v * 4 + 0];
-        const uint32_t j = triangles[v * 4 + 1];
-        const uint32_t k = triangles[v * 4 + 2];
-
-        const auto pij = bisector(i, j);
-        const auto pik = bisector(i, k);
-
-        const GEO::mat2 m  = {{
-            pij[0], pij[1], //
-            pik[0], pik[1], //
-        }};
-        const GEO::mat2 im = m.inverse();
-
-        const GEO::vec2 vertex = im * GEO::vec2(-pij[2], -pik[2]);
-        return {vertex.x, vertex.y};
-    }
-
-    std::vector<double> points;
+    // Input data
+    std::vector<double> seeds;
     std::vector<double> weights;
 
-    GEO::Delaunay_var     impl;
-    std::vector<uint32_t> triangles;
-};
+    // Diagram data
+    std::vector<double> vertices;
 
-struct PowerDiagram3d
-{
-    PowerDiagram3d(const Points3d& centers, const Weights& wweights)
-    {
-        GEO::initialize(GEO::GEOGRAM_INSTALL_ALL);
-        GEO::CmdLine::set_arg("dbg:delaunay", false);
-        GEO::CmdLine::set_arg("dbg:delaunay_verbose", false);
-        GEO::CmdLine::set_arg("dbg:delaunay_benchmark", false);
+    std::vector<GEO::index_t> triangle_vertices;
+    std::vector<GEO::index_t> triangle_regions;
+    std::vector<GEO::index_t> triangle_adjacency;
 
-        assert(centers.shape(0) == wweights.shape(0));
-        const std::size_t siteNb = centers.shape(0);
-
-        impl = GEO::Delaunay::create(GEO::coord_index_t(4), "BPOW");
-        impl->set_keeps_infinite(true);
-
-        double maxWeight = -std::numeric_limits<double>::max();
-        for (uint32_t i = 0; i < siteNb; ++i)
-            maxWeight = std::max(maxWeight, wweights(i));
-
-        points.resize(siteNb * 3);
-        weights.resize(siteNb);
-
-        std::vector<double> pointsAndWeights = std::vector(4 * siteNb, 0.);
-        for (uint32_t i = 0; i < siteNb; ++i)
-        {
-            pointsAndWeights[4 * i + 0] = centers(i, 0);
-            pointsAndWeights[4 * i + 1] = centers(i, 1);
-            pointsAndWeights[4 * i + 2] = centers(i, 2);
-            pointsAndWeights[4 * i + 3] = std::sqrt(maxWeight - wweights(i));
-
-            points[3 * i + 0] = centers(i, 0);
-            points[3 * i + 1] = centers(i, 1);
-            points[3 * i + 2] = centers(i, 2);
-            weights[i]        = wweights(i);
-        }
-
-        impl->set_vertices(GEO::index_t(siteNb), pointsAndWeights.data());
-
-        const uint32_t tetNb = impl->nb_cells();
-        tetrahedra.resize(tetNb * 4);
-
-        for (GEO::index_t t = 0; t < tetNb; ++t)
-        {
-            tetrahedra[t * 4 + 0] = GEO::index_t(impl->cell_vertex(t, 0));
-            tetrahedra[t * 4 + 1] = GEO::index_t(impl->cell_vertex(t, 1));
-            tetrahedra[t * 4 + 2] = GEO::index_t(impl->cell_vertex(t, 2));
-            tetrahedra[t * 4 + 3] = GEO::index_t(impl->cell_vertex(t, 3));
-        }
-    }
-
-    std::array<double, 4> bisector(uint32_t i, uint32_t j)
-    {
-        const GEO::vec3 pi = GEO::vec3(&points[i * 3]);
-        const GEO::vec3 pj = GEO::vec3(&points[j * 3]);
-
-        const double wij = -.5 * (dot(pj, pj) - dot(pi, pi) - weights[j] + weights[i]);
-        return {pj.x - pi.x, pj.y - pi.y, pj.z - pi.z, wij};
-    }
-
-    std::array<double, 3> vertex(uint32_t v)
-    {
-        const uint32_t i = tetrahedra[v * 4 + 0];
-        const uint32_t j = tetrahedra[v * 4 + 1];
-        const uint32_t k = tetrahedra[v * 4 + 2];
-        const uint32_t l = tetrahedra[v * 4 + 3];
-
-        const auto pij = bisector(i, j);
-        const auto pik = bisector(i, k);
-        const auto pil = bisector(i, l);
-
-        const GEO::mat3 m  = {{
-            pij[0], pij[1], pij[2], //
-            pik[0], pik[1], pik[2], //
-            pil[0], pil[1], pil[2], //
-        }};
-        const GEO::mat3 im = m.inverse();
-
-        const GEO::vec3 vertex = im * GEO::vec3(-pij[3], -pik[3], -pil[3]);
-        return {vertex.x, vertex.y, vertex.z};
-    }
-
-    std::vector<double> points;
-    std::vector<double> weights;
-
-    GEO::Delaunay_var     impl;
-    std::vector<uint32_t> tetrahedra;
+    std::vector<GEO::index_t> tet_vertices;
+    std::vector<GEO::index_t> tet_regions;
 };
 
 NB_MODULE(geogram_ext, m)
 {
-    nb::class_<PowerDiagram2d>(m, "PowerDiagram2d")
-        .def(nb::init<const Points2d&, const Weights&>(), "centers"_a, "weights"_a)
-        .def("triangles",
-             [](PowerDiagram2d& diagram) {
-                 return nb::ndarray<nb::numpy, uint32_t>( //
-                     diagram.triangles.data(), {diagram.triangles.size() / 3, 3}, nb::handle());
-             })
-        .def("size", [](const PowerDiagram2d& diagram) { return diagram.triangles.size() / 3; })
-        .def("vertex", &PowerDiagram2d::vertex);
+    nb::class_<Voronoi>(m, "Voronoi")
+        .def(nb::init<const VectorArray&, const DoubleArray&, const VectorArray&, const SimplexArray&>(), "seeds"_a,
+             "weights"_a = nb::none(), "domain_vertices"_a, "domain_simplices"_a)
+        .def_ro("dimension", &Voronoi::dimension)
+        .def_prop_ro("seeds",
+                     [](Voronoi& diagram) {
+                         return VectorArray(diagram.seeds.data(),
+                                            {diagram.seeds.size() / diagram.dimension, diagram.dimension});
+                     })
+        .def_ro("weights", &Voronoi::weights)
+        .def_prop_ro("q",
+                     [](Voronoi& diagram) {
+                         return VectorArray(diagram.vertices.data(),
+                                            {diagram.vertices.size() / diagram.dimension, diagram.dimension});
+                     })
+        .def_prop_ro("t",
+                     [](Voronoi& diagram) {
+                         return SimplexArray(diagram.triangle_vertices.data(),
+                                             {diagram.triangle_vertices.size() / 3, 3});
+                     })
+        .def_ro("tseed", &Voronoi::triangle_regions)
+        .def_prop_ro("tadj", [](Voronoi& diagram) {
+            return SimplexArray(diagram.triangle_adjacency.data(), {diagram.triangle_adjacency.size() / 3, 3});
+        });
 
-    nb::class_<PowerDiagram3d>(m, "PowerDiagram3d")
-        .def(nb::init<const Points3d&, const Weights&>(), "centers"_a, "weights"_a)
-        .def("tetrahedra",
-             [](PowerDiagram3d& diagram) {
-                 return nb::ndarray<nb::numpy, uint32_t>( //
-                     diagram.tetrahedra.data(), {diagram.tetrahedra.size() / 4, 4});
+    m.def_submodule("domain") //
+        .def("quad",
+             []() {
+                 std::vector vertices = {
+                     0., 0., //
+                     0., 1., //
+                     1., 0., //
+                     1., 1., //
+                 };
+                 std::vector triangles = {
+                     0, 1, 2, 2, 1, 3,
+                 };
+
+                 return nb::make_tuple(VectorArray(vertices.data(), {vertices.size() / 2, 2}).cast(),
+                                       SimplexArray(triangles.data(), {triangles.size() / 3, 3}).cast());
              })
-        .def("size", [](const PowerDiagram3d& diagram) { return diagram.tetrahedra.size() / 4; })
-        .def("vertex", &PowerDiagram3d::vertex);
+        .def("load", [](const std::string& path, const uint32_t dimension) {
+            geo_assert(dimension == 2 || dimension == 3);
+
+            GEO::Mesh mesh;
+            GEO::mesh_load(path, mesh);
+
+            // Vertices
+            std::vector<double> vertices = std::vector(mesh.vertices.nb() * mesh.vertices.dimension(), 0.);
+            std::memcpy(vertices.data(), mesh.vertices.point_ptr(0), vertices.size() * sizeof(double));
+
+            // Domain simplices
+            std::vector<GEO::index_t> simplices = {};
+            if (dimension == 2)
+            {
+                mesh.facets.triangulate(); // required?
+                simplices.resize(mesh.facets.nb() * 3);
+                std::memcpy(simplices.data(), mesh.facet_corners.vertex_index_ptr(0),
+                            simplices.size() * sizeof(GEO::index_t));
+            }
+            else if (dimension == 3)
+            {
+                simplices.resize(mesh.cells.nb() * 4);
+                std::memcpy(simplices.data(), mesh.cell_corners.vertex_index_ptr(0),
+                            simplices.size() * sizeof(GEO::index_t));
+            }
+            else
+            {
+                geo_assert_not_reached;
+            }
+
+            return nb::make_tuple(
+                VectorArray(vertices.data(), {vertices.size() / dimension, dimension}).cast(),
+                SimplexArray(simplices.data(), {simplices.size() / (dimension + 1), dimension + 1}).cast());
+        });
 }
