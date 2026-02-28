@@ -3,6 +3,7 @@ if (NOT TARGET geogram)
     set(VORPALINE_BUILD_DYNAMIC OFF CACHE BOOL "" FORCE)
     set(GEOGRAM_SUB_BUILD ON CACHE BOOL "" FORCE)
     set(GEOGRAM_LIB_ONLY ON CACHE BOOL "" FORCE)
+    set(GEOGRAM_WITH_TETGEN ON CACHE BOOL "" FORCE)
 
     # Based on https://github.com/tksuoran/erhe/blob/main/CMakeLists.txt#L93C1-L118C1
     if (CMAKE_SYSTEM_NAME MATCHES Linux)
