@@ -9,10 +9,13 @@ def test_voronoi_2d():
     seeds = np.random.rand(seed_nb, 2)
     voronoi = geo.Voronoi(seeds, domain_vertices=vertices, domain_simplices=triangles)
 
+    print(voronoi.tseed)
     assert voronoi.q.shape[0] > 0
+    assert voronoi.t.shape[0] > 0
+    assert voronoi.tadj.shape[0] > 0
+    assert voronoi.tseed.shape[0] > 0
 
 
-"""
 def test_laguerre_2d():
     (vertices, triangles) = geo.shape.quad()
 
@@ -26,13 +29,12 @@ def test_laguerre_2d():
     assert laguerre.tadj.shape[0] > 0
     assert laguerre.tseed.shape[0] > 0
 
-    weights[2] = 1.1
+    weights[2] = 1.01
     laguerre = geo.Voronoi(seeds, weights, domain_vertices=vertices, domain_simplices=triangles)
     assert laguerre.q.shape[0] > 0
     assert laguerre.t.shape[0] > 0
     assert laguerre.tadj.shape[0] > 0
     assert laguerre.tseed.shape[0] > 0
-"""
 
 
 def test_voronoi_3d():
