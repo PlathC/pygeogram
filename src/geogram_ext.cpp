@@ -9,10 +9,11 @@
 #include <geogram/delaunay/delaunay_2d.h>
 #include <geogram/delaunay/periodic_delaunay_3d.h>
 #include <geogram/mesh/mesh_io.h>
+#include <geogram/mesh/mesh_repair.h>
 #include <geogram/mesh/mesh_tetrahedralize.h>
 #include <geogram/voronoi/RVD.h>
 #include <geogram/voronoi/RVD_callback.h>
-
+#include <geogram/voronoi/generic_RVD_polygon.h>
 //
 #include "enable_warnings.hpp"
 //
@@ -22,8 +23,6 @@
 #include <nanobind/stl/array.h>
 #include <nanobind/stl/bind_vector.h>
 #include <nanobind/stl/vector.h>
-
-#include "geogram/voronoi/generic_RVD_polygon.h"
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -174,7 +173,7 @@ struct Voronoi
                 for (uint32_t d = 0; d < dimension; ++d)
                     input[(dimension + 1) * i + d] = seeds[dimension * i + d];
 
-                input[(dimension + 1) * i + dimension] = std::sqrt(maxWeight - weights[i]);
+                input[(dimension + 1) * i + dimension] = std::sqrt(std::max(maxWeight - weights[i], 0.));
             }
         }
         else
@@ -266,7 +265,7 @@ struct Voronoi
         }
         else if (dimension == 3)
         {
-            std::string name = isWeighted ? "BPOW" : "PDEL";
+            std::string name = "PDEL"; // isWeighted ? "BPOW" : "PDEL";
 
             GEO::Mesh domain;
             arrayToVolume({domainVertices.data(), domainVertices.size()},
@@ -275,24 +274,25 @@ struct Voronoi
             if (isWeighted)
                 domain.vertices.set_dimension(4);
 
-            GEO::Delaunay_var                 delaunay = GEO::Delaunay::create(dimension + (isWeighted ? 1 : 0));
+            GEO::Delaunay_var                 delaunay = GEO::Delaunay::create(dimension + (isWeighted ? 1 : 0), name);
             GEO::RestrictedVoronoiDiagram_var RVD      = GEO::RestrictedVoronoiDiagram::create(delaunay, &domain);
+
+            delaunay->set_stores_cicl(true);
+            RVD->set_volumetric(true);
+            RVD->set_check_SR(true);
+            RVD->create_threads();
+
             delaunay->set_vertices(seedNb, input.data());
 
-            RVD->set_volumetric(true);
-
             GEO::Mesh resultMesh;
-            RVD->compute_RVD(resultMesh, 0, false, false);
-            if (isWeighted)
-            {
-                // domain.vertices.set_dimension(3);
-                resultMesh.vertices.set_dimension(3);
-            }
+            RVD->compute_RVD(resultMesh, 0, false, true);
 
-            geo_assert(resultMesh.vertices.dimension() == 3);
+            if (isWeighted)
+                resultMesh.vertices.set_dimension(3);
+
             vertices.resize(resultMesh.vertices.nb() * 3);
             for (uint32_t v = 0; v < resultMesh.vertices.nb(); ++v)
-                std::memcpy(vertices.data() + v * 3, resultMesh.vertices.point_ptr(v), sizeof(double) * 3);
+                std::memcpy(&vertices[v * 3], resultMesh.vertices.point_ptr(v), sizeof(double) * 3);
 
             simplexVertices.resize(resultMesh.cells.nb() * 4);
             std::memcpy(simplexVertices.data(), resultMesh.cell_corners.vertex_index_ptr(0),
@@ -444,9 +444,9 @@ NB_MODULE(geogram_ext, m)
                                        SimplexArray(oSimplices.data(), {oSimplices.size() / 4, 4}).cast());
              })
         .def("load_surface",
-             [](const std::string& path) {
+             [](const nb::str path) {
                  GEO::Mesh mesh;
-                 GEO::mesh_load(path, mesh);
+                 GEO::mesh_load(path.c_str(), mesh);
 
                  const uint32_t dimension = mesh.vertices.dimension();
 
@@ -459,9 +459,9 @@ NB_MODULE(geogram_ext, m)
                                        SimplexArray(simplices.data(), {simplices.size() / 3, 3}).cast());
              })
         .def("load_volume",
-             [](const std::string& path) {
+             [](const nb::str path) {
                  GEO::Mesh mesh;
-                 GEO::mesh_load(path, mesh);
+                 GEO::mesh_load(path.c_str(), mesh);
 
                  const uint32_t dimension = mesh.vertices.dimension();
                  geo_assert(dimension == 3);
