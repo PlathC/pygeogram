@@ -5,7 +5,7 @@
 Pre-built binary wheels are provided on PyPI which can then be installed with
 
 ```sh
-pip install grampy
+pip install geogrampy
 ```
 
 ## Example
