@@ -210,7 +210,7 @@ struct Voronoi
             ComputeRVDPolygonCallback callback(resultMesh, dimension);
             RVD->for_each_polygon(callback, false, false, false);
 
-            const double epsilon = 1e-10 * (0.01 * bbox_diagonal(resultMesh));
+            const double epsilon = 1e-10 * (0.01 * GEO::bbox_diagonal(resultMesh));
             GEO::mesh_repair( //
                 resultMesh, GEO::MeshRepairMode(GEO::MESH_REPAIR_COLOCATE | GEO::MESH_REPAIR_DUP_F), epsilon);
 
@@ -261,6 +261,8 @@ struct Voronoi
             std::memcpy(simplexVertices.data(), resultMesh.facet_corners.vertex_index_ptr(0),
                         sizeof(GEO::index_t) * simplexVertices.size());
 
+            resultMesh.facets.connect();
+            resultMesh.cells.connect();
             simplexAdjacency.resize(resultMesh.facets.nb() * 3);
             std::memcpy(simplexAdjacency.data(), resultMesh.facet_corners.adjacent_facet_ptr(0),
                         sizeof(GEO::index_t) * simplexAdjacency.size());
