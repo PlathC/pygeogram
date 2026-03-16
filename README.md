@@ -1,4 +1,4 @@
-# python binding for [geogram](https://github.com/BrunoLevy/geogram)
+# pygeogram: python binding for [geogram](https://github.com/BrunoLevy/geogram)
 
 This repos provides python bindings for [`geogram`](https://github.com/BrunoLevy/geogram)'s state-of-the-art Voronoi diagram builder and related algorithms.
 
