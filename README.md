@@ -31,4 +31,11 @@ decomposed into a set of simplex:
 - `tadj (#t, d)`: Simplex's neighbour index
 - `tseed (#t)`: Simplex's corresponding seed index
 
-See `examples` for dedicated notebooks.
+Plotting the simplices edges `t` between the voronoi vertices `q` leads to
+<p align="center">
+  <img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/cc7e360f-d2c8-491e-a92b-b405cdd4a5a5" />
+  <img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/0c102038-f24c-4c2a-892a-fbdf22ab3f90" />
+</p>
+
+
+See `examples` for additional notebooks.
