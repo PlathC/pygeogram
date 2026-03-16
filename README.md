@@ -1,11 +1,11 @@
-# geogrampy - python binding for [geogram](https://github.com/BrunoLevy/geogram)
+# python binding for [geogram](https://github.com/BrunoLevy/geogram)
 
-`geogrampy` aims at providing `geogram`'s state-of-the-art Voronoi diagram builder and related algorithms.
+This repos provides python bindings for [`geogram`](https://github.com/BrunoLevy/geogram)'s state-of-the-art Voronoi diagram builder and related algorithms.
 
 Pre-built binary wheels are provided on PyPI which can then be installed with
 
 ```sh
-pip install geogrampy
+pip install geogram
 ```
 
 ## Example
