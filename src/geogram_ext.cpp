@@ -8,6 +8,7 @@
 #include <geogram/basic/command_line_args.h>
 #include <geogram/delaunay/delaunay_2d.h>
 #include <geogram/delaunay/periodic_delaunay_3d.h>
+#include <geogram/mesh/mesh_geometry.h>
 #include <geogram/mesh/mesh_io.h>
 #include <geogram/mesh/mesh_repair.h>
 #include <geogram/mesh/mesh_tetrahedralize.h>
@@ -87,10 +88,8 @@ void arrayToVolume(const std::span<const double> iVertices, const std::span<cons
     mesh.cells.assign_tet_mesh(3, oVertices, oSimplices, true);
 }
 
-/**
- * \brief A RVDPolygonCallback that stores the Restricted Voronoi
- *  Diagram in a Mesh.
- */
+// See:
+// https://github.com/BrunoLevy/exploragram/blob/62e2dc766ba0352e8f621da3111d8f85cef64e29/optimal_transport/optimal_transport_2d.cpp#L477
 class ComputeRVDPolygonCallback : public GEO::RVDPolygonCallback
 {
   public:
@@ -139,9 +138,8 @@ struct Voronoi
 {
     Voronoi(const VectorArray& iSeeds, const DoubleArray& iWeights, const VectorArray& domainVertices,
             const SimplexArray& domainSimplices)
-        : dimension(static_cast<uint32_t>(iSeeds.shape(1))), //
-          seedNb(static_cast<uint32_t>(iSeeds.shape(0))),    //
-          isWeighted(iWeights.is_valid())                    //
+        : dimension(static_cast<uint32_t>(iSeeds.shape(1))), seedNb(static_cast<uint32_t>(iSeeds.shape(0))),
+          isWeighted(iWeights.is_valid())
     {
         geo_assert(iSeeds.shape(1) == 2 || iSeeds.shape(1) == 3);
         geo_assert(iSeeds.shape(0) > 0);
@@ -211,6 +209,10 @@ struct Voronoi
             ComputeRVDPolygonCallback callback(resultMesh, dimension);
             RVD->for_each_polygon(callback, false, false, false);
 
+            const double epsilon = 1e-10 * (0.01 * bbox_diagonal(resultMesh));
+            GEO::mesh_repair( //
+                resultMesh, GEO::MeshRepairMode(GEO::MESH_REPAIR_COLOCATE | GEO::MESH_REPAIR_DUP_F), epsilon);
+
             if (isWeighted)
                 resultMesh.vertices.set_dimension(2);
 
@@ -218,9 +220,8 @@ struct Voronoi
             {
                 GEO::index_t triangleNb = 0;
                 for (GEO::index_t f = 0; f < resultMesh.facets.nb(); f++)
-                {
                     triangleNb += (resultMesh.facets.nb_vertices(f) - 2);
-                }
+
                 GEO::vector<GEO::index_t> newCornerVertexIndex;
                 newCornerVertexIndex.reserve(triangleNb * 3);
                 simplexRegions.reserve(triangleNb);
@@ -265,7 +266,7 @@ struct Voronoi
         }
         else if (dimension == 3)
         {
-            std::string name = "PDEL"; // isWeighted ? "BPOW" : "PDEL";
+            std::string name = "PDEL";
 
             GEO::Mesh domain;
             arrayToVolume({domainVertices.data(), domainVertices.size()},
