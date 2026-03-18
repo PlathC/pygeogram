@@ -37,12 +37,19 @@ void surfaceToArray(GEO::Mesh& mesh, std::vector<double>& oVertices, std::vector
 {
     const uint32_t dimension = mesh.vertices.dimension();
 
-    mesh.facets.triangulate(); // required?
-    oVertices.resize(mesh.vertices.nb() * dimension);
-    std::memcpy(oVertices.data(), mesh.vertices.point_ptr(0), oVertices.size() * sizeof(double));
+    if (mesh.vertices.nb() > 0)
+    {
+        mesh.facets.triangulate(); // required?
+        oVertices.resize(mesh.vertices.nb() * dimension);
+        std::memcpy(oVertices.data(), mesh.vertices.point_ptr(0), oVertices.size() * sizeof(double));
+    }
 
-    oSimplices.resize(mesh.facets.nb() * 3);
-    std::memcpy(oSimplices.data(), mesh.facet_corners.vertex_index_ptr(0), oSimplices.size() * sizeof(GEO::index_t));
+    if (mesh.facets.nb() > 0)
+    {
+        oSimplices.resize(mesh.facets.nb() * 3);
+        std::memcpy(oSimplices.data(), mesh.facet_corners.vertex_index_ptr(0),
+                    oSimplices.size() * sizeof(GEO::index_t));
+    }
 }
 
 void volumeToArray(GEO::Mesh& mesh, std::vector<double>& oVertices, std::vector<GEO::index_t>& oSimplices)
@@ -108,9 +115,7 @@ class ComputeRVDPolygonCallback : public GEO::RVDPolygonCallback
     void do_it(GEO::index_t v, GEO::index_t t, const GEOGen::Polygon& P) const
     {
         if (P.nb_vertices() == 0)
-        {
             return;
-        }
 
         const GEO::index_t voffset = m_target->vertices.nb();
         for (GEO::index_t i = 0; i < P.nb_vertices(); i++)
