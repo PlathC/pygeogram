@@ -38,4 +38,4 @@ Plotting the simplices edges `t` between the voronoi vertices `q` leads to
 </p>
 
 
-See `examples` for additional notebooks.
+See [`examples`](examples) for additional notebooks.
