@@ -202,6 +202,7 @@ struct Voronoi
             GEO::Delaunay_var                 delaunay = GEO::Delaunay::create(dimension + (isWeighted ? 1 : 0), name);
             GEO::RestrictedVoronoiDiagram_var RVD      = GEO::RestrictedVoronoiDiagram::create(delaunay, &domain);
 
+            RVD->set_exact_predicates(true);
             if (isWeighted)
             {
                 RVD->set_volumetric(true);
@@ -289,12 +290,16 @@ struct Voronoi
             delaunay->set_stores_cicl(true);
             RVD->set_volumetric(true);
             RVD->set_check_SR(true);
+            RVD->set_exact_predicates(true);
             RVD->create_threads();
 
             delaunay->set_vertices(seedNb, input.data());
 
-            GEO::Mesh resultMesh;
+            GEO::Mesh                    resultMesh;
+            GEO::Attribute<GEO::index_t> tet_region(resultMesh.cells.attributes(), "region");
             RVD->compute_RVD(resultMesh, 0, false, true);
+
+            resultMesh.cells.connect();
 
             if (isWeighted)
                 resultMesh.vertices.set_dimension(3);
@@ -307,15 +312,17 @@ struct Voronoi
             std::memcpy(simplexVertices.data(), resultMesh.cell_corners.vertex_index_ptr(0),
                         sizeof(GEO::index_t) * simplexVertices.size());
 
-            // How to compute adjacency? -> Copy what is done for triangles?
-            // simplex_adjacency.resize(resultMesh.facets.nb() * 4);
-            // std::memcpy(simplex_adjacency.data(), resultMesh.facet_corners.adjacent_facet_ptr(0),
-            //             sizeof(GEO::index_t) * simplex_adjacency.size());
-
             simplexRegions.resize(resultMesh.cells.nb());
             GEO::Attribute<GEO::index_t> facet_region_attr(resultMesh.cells.attributes(), "region");
             for (GEO::index_t f = 0; f < resultMesh.cells.nb(); ++f)
                 simplexRegions[f] = facet_region_attr[f];
+
+            simplexAdjacency.resize(resultMesh.cells.nb() * 4);
+            for (uint32_t c = 0; c < resultMesh.cells.nb(); ++c)
+            {
+                for (uint32_t f = 0; f < 4; ++f)
+                    simplexAdjacency[c * 4 + f] = resultMesh.cells.tet_adjacent(c, f);
+            }
         }
     }
 
