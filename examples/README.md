@@ -18,32 +18,12 @@ pip install -r requirements.txt
 
 - `voronoi-2d` and `voronoi-3d`
 
-<center>
-    <table>
-        <tr>
-            <td><img src="./img/voronoi-2d.png" alt="Voronoi 2D" style="height:200px; object-fit:contain;"/></td>
-            <td><img src="./img/voronoi-3d.png" alt="Voronoi 3D" style="height:200px; object-fit:contain;"/></td>
-        </tr>
-    </table>
-</center>
+![./img/voronoi.png](./img/voronoi.png)
 
 - `transport-2d` and `transport-3d`
 
-<center>
-    <table>
-        <tr>
-            <td><img src="./img/transport-2d.png" alt="Transport 2D" style="height:200px; object-fit:contain;"/></td>
-            <td><img src="./img/transport-3d.png" alt="Transport 3D" style="height:200px; object-fit:contain;"/></td>
-        </tr>
-    </table>
-</center>
+![./img/transport.png](./img/transport.png)
 
 - `fluid-2d`
 
-<center>
-    <table>
-        <tr>
-            <td><img src="./img/fluid-2d.png" alt="Fluid 2D" style="height:200px; object-fit:contain;"/></td>
-        </tr>
-    </table>
-</center>
+![./img/fluid-2d.png](./img/fluid-2d.png)
