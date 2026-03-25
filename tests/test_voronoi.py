@@ -9,7 +9,6 @@ def test_voronoi_2d():
     seeds = np.random.rand(seed_nb, 2)
     voronoi = geo.Voronoi(seeds, domain_vertices=vertices, domain_simplices=triangles)
 
-    print(voronoi.tseed)
     assert voronoi.q.shape[0] > 0
     assert voronoi.t.shape[0] > 0
     assert voronoi.tadj.shape[0] > 0
