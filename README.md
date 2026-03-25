@@ -10,7 +10,7 @@ pip install geogram
 
 ## Example
 
-A 2D Laguerre diagram can be computed with:
+A Voronoi diagram can be computed with:
 
 ```py
 import geogram as geo
