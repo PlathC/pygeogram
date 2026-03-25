@@ -202,7 +202,6 @@ struct Voronoi
             GEO::Delaunay_var                 delaunay = GEO::Delaunay::create(dimension + (isWeighted ? 1 : 0), name);
             GEO::RestrictedVoronoiDiagram_var RVD      = GEO::RestrictedVoronoiDiagram::create(delaunay, &domain);
 
-            RVD->set_exact_predicates(true);
             if (isWeighted)
             {
                 RVD->set_volumetric(true);
