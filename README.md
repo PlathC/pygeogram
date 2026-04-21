@@ -32,9 +32,9 @@ decomposed into a set of simplex:
 - `tseed (#t)`: Simplex's corresponding seed index
 
 Plotting the simplices edges `t` between the voronoi vertices `q` leads to
-<p align="center">
-  <img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/cc7e360f-d2c8-491e-a92b-b405cdd4a5a5" />
-  <img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/0c102038-f24c-4c2a-892a-fbdf22ab3f90" />
+<p float="center">
+  <img width="400" src="https://github.com/user-attachments/assets/cc7e360f-d2c8-491e-a92b-b405cdd4a5a5"/>
+  <img width="400" src="https://github.com/user-attachments/assets/0c102038-f24c-4c2a-892a-fbdf22ab3f90" /> 
 </p>
 
 
