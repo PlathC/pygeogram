@@ -7,7 +7,7 @@ else ()
     set(DEV_MODULE Development.Module)
 endif ()
 
-find_package(Python 3.13 COMPONENTS Interpreter ${DEV_MODULE} REQUIRED)
+find_package(Python COMPONENTS Interpreter ${DEV_MODULE} REQUIRED)
 
 ## Detect the installed nanobind package and import it into CMake
 execute_process(
